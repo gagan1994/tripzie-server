@@ -10,10 +10,10 @@ const fcmUrl = 'https://fcm.googleapis.com/fcm/send';
 const app = express();
 app.use(express.json());
 app.use(async (req, res, next) => {
+  console.log("app init");
   try {
-    const client = await MongoClient.connect(process.env.URI);
+    const client = await MongoClient.connect(process.env.URI_LOCAL_MAC);
     const db = client.db('test');
-
     req.db = db;
     req.client = client;
     next();
@@ -22,7 +22,10 @@ app.use(async (req, res, next) => {
     res.sendStatus(500);
   }
 });
-app.get('/status', (req, res) => res.send({ "status": "running" }));
+app.get('/status', (req, res) => {
+  console.log("/status");
+  res.send({ "status": "running" })
+});
 
 app.get('/current_rides', async (req, res) => {
   try {
