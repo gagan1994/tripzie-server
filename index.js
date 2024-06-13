@@ -1,4 +1,6 @@
 const express = require('express');
+const http = require('http');
+
 const serverless = require('serverless-http');
 const axios = require('axios');
 require('dotenv').config();
@@ -6,8 +8,19 @@ const googleOAuth = require('./middleware/index');
 const { ObjectId, MongoClient } = require('mongodb');
 const firebaseAdmin = require('./config/firebase-config')
 const fcmUrl = 'https://fcm.googleapis.com/fcm/send';
+const { setupWebSocket } = require('./socketServer');
 
 const app = express();
+
+// Serve static files from the 'public' directory
+app.use(express.static('public'));
+
+// Create an HTTP server using the Express app
+const server = http.createServer(app);
+
+// Setup WebSocket server
+setupWebSocket(server);
+
 app.use(express.json());
 app.use(async (req, res, next) => {
   console.log("app init");
@@ -22,6 +35,10 @@ app.use(async (req, res, next) => {
     res.sendStatus(500);
   }
 });
+app.get('/', (req, res) => {
+  res.sendFile(__dirname + '/public/index.html');
+});
+
 app.get('/status', (req, res) => {
   console.log("/status");
   res.send({ "status": "running" })
@@ -399,10 +416,11 @@ app.patch('/fcm_token', async (req, res) => {
 
 if (process.env.DEV === 'true') {
   console.log('dev env')
-  app.listen(process.env.PORT, () =>
+  server.listen(process.env.PORT, () =>
     console.log(`Server is listening on port ${process.env.PORT}.${process.env.DEV} `)
   );
 }
 else {
+  console.log("running serverless")
   exports.handler = serverless(app);
 }
