@@ -1,6 +1,6 @@
 const { Server } = require('socket.io');
 
-function setupWebSocket(server) {
+function setup_web_socket(server) {
     const io = new Server(server);
 
     io.on("connection", (socket) => {
@@ -16,4 +16,4 @@ function setupWebSocket(server) {
 
 }
 
-module.exports = { setupWebSocket };
+module.exports = { setup_web_socket };
