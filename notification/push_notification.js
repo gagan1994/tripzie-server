@@ -1,8 +1,13 @@
 const axios = require('axios');
 const fcmUrl = 'https://fcm.googleapis.com/fcm/send';
-
+const NOTIFICATION_TYPE = Object.freeze({
+  PUSH_NOTIFICATION: 1,
+  ADVERTISE_NOTIFICATION: 2,
+  RIDE_STATUS_NOTIFICATION: 3,
+})
 function send_notfication(registrationTokens, notification) {
   console.log('Data from all promises:', registrationTokens);
+  console.log('sending notification: ', notification)
   const postData = {
     'registration_ids': registrationTokens,
     "notification": {
@@ -24,4 +29,4 @@ function send_notfication(registrationTokens, notification) {
     });
 }
 
-module.exports = { send_notfication };
+module.exports = { send_notfication, NOTIFICATION_TYPE };

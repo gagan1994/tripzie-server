@@ -7,7 +7,7 @@ const googleOAuth = require('./middleware/index');
 const { ObjectId, MongoClient } = require('mongodb');
 const firebaseAdmin = require('./config/firebase-config')
 const { setup_web_socket } = require('./socket_wrapper/socket_server');
-const { send_notfication } = require('./notification/push_notification');
+const { send_notfication, NOTIFICATION_TYPE } = require('./notification/push_notification');
 const { update_ride_users, RIDE_STATUS } = require('./modules/ride_modules');
 
 const app = express();
@@ -214,14 +214,50 @@ app.post('/profiles', async (req, res) => {
   try {
     console.log("req", req.body)
     const usersCollection = req.db.collection('profiles');
-    const users = await usersCollection.insertOne(req.body);
-    notificationData = {
-      "body": "Welcome to TriPit. create ride, meet friends, and explore the world.🏍️💨",
-      "title": "Welcome🤗",
-      "data": result
+    query = {
+      "$or": [
+        { "phone": req.body["phone"] },
+        { "email": req.body["email"] }
+      ]
     }
-    send_notfication([req.body['fcmToken']], notificationData)
-    res.json(users);
+    existing_document = await usersCollection.findOne(query)
+    console.log("isExisting document: " + existing_document);
+    body = "Welcome to TriPit. create ride, meet friends, and explore the world.🏍️💨";
+    title = "Welcome🤗"
+    if (existing_document) {
+      const updateDocument = {
+        $set: req.body
+      };
+      body = "Welcome back to TriPit. We missed you..."
+      title = "Welcome Back🤗"
+      notification_data = {
+        body: body,
+        title: title,
+        data: {
+          type: NOTIFICATION_TYPE.PUSH_NOTIFICATION,
+          message: title
+        }
+      }
+      result = await usersCollection.updateOne(query, updateDocument, upsert = true)
+      console.log("Updated Exisitng")
+      res.json({ "user_id": existing_document["_id"], "is_updated": true });
+    } else {
+      notification_data = {
+        body: body,
+        title: title,
+        data: {
+          type: NOTIFICATION_TYPE.PUSH_NOTIFICATION,
+          message: title
+        }
+      }
+      const users = await usersCollection.insertOne(req.body);
+      res.json({ "user_id": users["inserted_id"], "is_updated": false });
+      console.log("created new")
+    }
+
+    if (req.body['fcmToken']) {
+      send_notfication([req.body['fcmToken']], notification_data)
+    }
   } catch (error) {
     console.error('Error retrieving users from MongoDB:', error);
     res.sendStatus(500);

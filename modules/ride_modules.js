@@ -1,4 +1,4 @@
-const { send_notfication } = require('.././notification/push_notification');
+const { send_notfication, NOTIFICATION_TYPE } = require('.././notification/push_notification');
 
 async function update_ride_users(ride_id, rideStatus) {
     const filter = { _id: new ObjectId(ride_id) };
@@ -24,9 +24,12 @@ async function notifyUserAboutRide(result, req, rideStatus) {
     Promise.all(promises)
         .then(registrationTokens => {
             notificationData = {
-                "body": rideStatus.message,
-                "title": result.name,
-                "data": result
+                body: rideStatus.message,
+                title: result.name,
+                data: {
+                    type: NOTIFICATION_TYPE.RIDE_STATUS_NOTIFICATION,
+                    message: result
+                }
             }
             send_notfication(registrationTokens, notificationData)
         })
