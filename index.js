@@ -6,7 +6,8 @@ require('dotenv').config();
 const googleOAuth = require('./middleware/index');
 const { ObjectId, MongoClient } = require('mongodb');
 const firebaseAdmin = require('./config/firebase-config')
-const { setup_web_socket } = require('./socket_wrapper/socket_server');
+const { setup_web_socket } = require('./webrtc/webrtc_socket.js');
+
 const { send_notfication, NOTIFICATION_TYPE } = require('./notification/push_notification');
 const { update_ride_users, RIDE_STATUS } = require('./modules/ride_modules');
 
@@ -85,7 +86,7 @@ app.post('/rides', async (req, res) => {
     const ridesCollection = req.db.collection('trips');
     req.body['status'] = RIDE_STATUS.RIDE_CREATED.status;
     const response = await ridesCollection.insertOne(req.body);
-    await update_ride_users(response.insertedId, RIDE_STATUS.RIDE_CREATED)
+    await update_ride_users(req, response.insertedId, RIDE_STATUS.RIDE_CREATED)
     res.status(201).json(response);
   } catch (error) {
     console.error('Error retrieving users from MongoDB:', error);
@@ -98,7 +99,7 @@ app.delete('/rides/:id', async (req, res) => {
   try {
     const ridesCollection = req.db.collection('trips');
     console.log("req.params.id", req.params.id)
-    await update_ride_users(req.params.id, RIDE_STATUS.RIDE_DELETED)
+    await update_ride_users(req, req.params.id, RIDE_STATUS.RIDE_DELETED)
     const result = await ridesCollection.deleteOne({ _id: new ObjectId(req.params.id) });
     if (result.deletedCount === 0) {
       return res.status(404).json({ message: 'Document not found' });
@@ -142,7 +143,7 @@ app.patch('/rides/:id', async (req, res) => {
     console.log("req.params.id", req.params.id)
     const result = await ridesCollection.updateOne({ _id: new ObjectId(req.params.id) },
       { $set: updatedFields });
-    update_ride_users(req.params.id, RIDE_STATUS.RIDE_CREATED)
+    update_ride_users(req, req.params.id, RIDE_STATUS.RIDE_STARTED)
     if (result.matchedCount === 0) {
       return res.status(404).json({ message: 'ride not found' });
     }
@@ -156,7 +157,8 @@ app.patch('/rides/:id', async (req, res) => {
 });
 app.post('/start_ride', async (req, res) => {
 
-  isStarted = await update_ride_users(req.body.ride_id, RIDE_STATUS.RIDE_STARTED)
+  console.log("starting ride: rideId: ", req.body.ride_id)
+  isStarted = await update_ride_users(req, req.body.ride_id, RIDE_STATUS.RIDE_STARTED)
   if (isStarted) {
     res.send(RIDE_STATUS.RIDE_STARTED).status(200);
   } else {
@@ -164,7 +166,7 @@ app.post('/start_ride', async (req, res) => {
   }
 })
 app.post('/complete_ride', async (req, res) => {
-  isSuccess = await update_ride_users(req.body.ride_id, RIDE_STATUS.RIDE_ENDED)
+  isSuccess = await update_ride_users(req, req.body.ride_id, RIDE_STATUS.RIDE_ENDED)
   if (isSuccess) {
     res.send(RIDE_STATUS.RIDE_ENDED).status(200)
   } else {
@@ -304,11 +306,8 @@ app.patch('/profiles/:id', async (req, res) => {
 app.get('/profiles/phone/:phone', async (req, res) => {
   try {
     const usersCollection = req.db.collection('profiles');
-    //const objectId = new ObjectId(req.params.phone);
-
     const rides = await usersCollection.findOne({ phone: req.params.phone });
-    console.log("inside rides/phone", req.params.phone, rides)
-    //const result = await collection.findOne({ _id :objectId});
+    console.log("inside profiles/phone", req.params.phone, rides)
     res.json(rides);
   } catch (error) {
     console.error('Error retrieving users from MongoDB:', error);
@@ -319,11 +318,9 @@ app.get('/profiles/phone/:phone', async (req, res) => {
 app.get('/profiles/email/:email', async (req, res) => {
   try {
     const usersCollection = req.db.collection('profiles');
-    //const objectId = new ObjectId(req.params.phone);
-
+    console.log("fetching through email: ", req.params.email)
     const rides = await usersCollection.findOne({ email: req.params.email });
-    console.log("inside rides/email", req.params.email, rides)
-    //const result = await collection.findOne({ _id :objectId});
+    console.log("inside profiles/email", req.params.email, rides)
     res.json(rides);
   } catch (error) {
     console.error('Error retrieving users from MongoDB:', error);

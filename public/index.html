@@ -1,4 +1,4 @@
-<!-- public/index.html -->
+<!-- public/websocket_index.html -->
 <!DOCTYPE html>
 <html lang="en">
 
@@ -9,25 +9,75 @@
 
 <body>
     <h1>WebSocket Test</h1>
+    <input id="user-id" type="text" placeholder="user name">
+    <br>
+    <text id="room-id">room Id</text>
+    <br>
+    <button onclick="createRoom()">Create Room</button>
+    <br>
+
+    <input id="join-room-id" type="text" placeholder="enter room id">
+    <button onclick="joinRoom()">Join room</button>
+
+    <br>
+
     <input id="message" type="text" placeholder="Type a message...">
     <button onclick="sendMessage()">Send</button>
     <ul id="messages"></ul>
 
     <script src="/socket.io/socket.io.js"></script>
     <script>
-        const socket = io();
+        const ws = new WebSocket('ws://localhost:3000');
+        var room_id = ''
+        ws.onopen = () => {
+            console.log('Connected to WebSocket server');
+        };
 
-        socket.on('position-change', (msg) => {
+        ws.onmessage = (event) => {
+            console.log(event.data);
             const li = document.createElement('li');
-            li.textContent = msg;
+            li.textContent = event.data;
             document.getElementById('messages').appendChild(li);
-        });
+        };
+
+        ws.onclose = () => {
+            console.log('WebSocket connection closed');
+        };
+
+        ws.onerror = (error) => {
+            console.error('WebSocket error:', error);
+        };
 
         function sendMessage() {
             const input = document.getElementById('message');
-            socket.emit('position-change', input.value);
+            ws.send(JSON.stringify({ type: 'location-update', data: JSON.parse(input.value), room_id: room_id }));
             input.value = '';
         }
+        function createRoom() {
+            var uuid = getUUID()
+            room_id = uuid
+            console.log("Room id: ", room_id)
+            const user_id = document.getElementById('user-id');
+            ws.send(JSON.stringify({ type: 'create-room', room_id: room_id, user_id: user_id.value }));
+            const room_id_text = document.getElementById('room-id');
+            room_id_text.value = room_id;
+        }
+        function joinRoom() {
+            const room_id_field = document.getElementById('join-room-id');
+            room_id = room_id_field.value
+            const user_id = document.getElementById('user-id');
+            ws.send(JSON.stringify({ type: 'create-room', room_id: room_id, user_id: user_id.value }));
+            const room_id_val = document.getElementById('room-id');
+            room_id_val.value = room_id;
+
+        }
+        function getUUID() {
+            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+                var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+                return v.toString(16);
+            });
+        }
+
     </script>
 </body>
 
