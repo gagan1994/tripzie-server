@@ -63,13 +63,14 @@ function handleMessage(ws, message) {
             }
             rooms[room_id][user_id] = ws;
             console.log(`user ${user_id} room_id: ${room_id} created room total users: ${rooms[room_id]}`);
-            sendMessage(ws, 'room-created', { room_id });
+            forwardMessageToAllMembersInRoom(room_id, ws, { type: "user-joined", user_id: user_id })
             break;
 
         case 'join-room':
             rooms[room_id][user_id] = ws;
             console.log(`new user ${user_id} room_id: ${room_id} joined room total users: ${rooms[room_id].length}`);
             sendMessage(ws, 'joined-room', { room_id, user_id });
+            forwardMessageToAllMembersInRoom(room_id, ws, { type: "user-joined", user_id: user_id })
             break;
 
         case 'start-meeting':
@@ -139,7 +140,6 @@ function handleMessage(ws, message) {
             rooms = {};
             console.log(`clearing room data`); break
         case 'location-update':
-            console.log("location-update: ", room_id, data.user_id)
             forwardMessageToRoom(room_id, ws, data);
             break;
         default:
@@ -154,13 +154,21 @@ function forwardMessageToRoom(room_id, sender, message) {
             var client = roomClients[key];
             if (client !== sender) {
                 client.send(JSON.stringify(message));
-                console.log(`sending message to ${key}`);
-
             }
         });
 
 }
+function forwardMessageToAllMembersInRoom(room_id, message) {
+    const roomClients = rooms[room_id];
+    if (roomClients)
+        user_ids = Object.keys(roomClients);
 
+    Object.keys(roomClients).forEach(function (key) {
+        var client = roomClients[key];
+        client.send(JSON.stringify({ type: "user-joined", user_id: user_ids }));
+    });
+
+}
 
 function handleIceCandidate(room_id, user_id, candidate) {
     // Broadcast ICE candidate to all other users in the room

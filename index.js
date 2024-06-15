@@ -253,7 +253,8 @@ app.post('/profiles', async (req, res) => {
         }
       }
       const users = await usersCollection.insertOne(req.body);
-      res.json({ "user_id": users["inserted_id"], "is_updated": false });
+      console.log("created user ", users)
+      res.json({ "user_id": users["insertedId"], "is_updated": false });
       console.log("created new")
     }
 
@@ -308,7 +309,11 @@ app.get('/profiles/phone/:phone', async (req, res) => {
     const usersCollection = req.db.collection('profiles');
     const rides = await usersCollection.findOne({ phone: req.params.phone });
     console.log("inside profiles/phone", req.params.phone, rides)
-    res.json(rides);
+    if (rides != null) {
+      res.json(rides);
+    } else {
+      res.sendStatus(404)
+    }
   } catch (error) {
     console.error('Error retrieving users from MongoDB:', error);
     res.sendStatus(500);
@@ -321,7 +326,12 @@ app.get('/profiles/email/:email', async (req, res) => {
     console.log("fetching through email: ", req.params.email)
     const rides = await usersCollection.findOne({ email: req.params.email });
     console.log("inside profiles/email", req.params.email, rides)
-    res.json(rides);
+    if (rides != null) {
+      console.log("rides not null");
+      res.json(rides);
+    } else {
+      res.sendStatus(505)
+    }
   } catch (error) {
     console.error('Error retrieving users from MongoDB:', error);
     res.sendStatus(500);
