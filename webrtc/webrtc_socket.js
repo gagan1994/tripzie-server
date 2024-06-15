@@ -27,6 +27,7 @@ function setup_web_socket(server) {
                     const room = rooms[room_id];
                     for (const user_id in room) {
                         if (room.hasOwnProperty(user_id) && room[user_id] === ws) {
+                            forwardMessageToRoom(room_id, ws, { user_id: user_id, type: 'user-left' })
                             delete room[user_id];
                         }
                     }
@@ -62,15 +63,14 @@ function handleMessage(ws, message) {
                 console.log("room already created joining");
             }
             rooms[room_id][user_id] = ws;
-            console.log(`user ${user_id} room_id: ${room_id} created room total users: ${rooms[room_id]}`);
-            forwardMessageToAllMembersInRoom(room_id, ws, { type: "user-joined", user_id: user_id })
+            forwardMessageToAllMembersInRoom(room_id)
             break;
 
         case 'join-room':
             rooms[room_id][user_id] = ws;
             console.log(`new user ${user_id} room_id: ${room_id} joined room total users: ${rooms[room_id].length}`);
             sendMessage(ws, 'joined-room', { room_id, user_id });
-            forwardMessageToAllMembersInRoom(room_id, ws, { type: "user-joined", user_id: user_id })
+            forwardMessageToAllMembersInRoom(room_id)
             break;
 
         case 'start-meeting':
@@ -158,14 +158,15 @@ function forwardMessageToRoom(room_id, sender, message) {
         });
 
 }
-function forwardMessageToAllMembersInRoom(room_id, message) {
+function forwardMessageToAllMembersInRoom(room_id) {
     const roomClients = rooms[room_id];
     if (roomClients)
         user_ids = Object.keys(roomClients);
 
     Object.keys(roomClients).forEach(function (key) {
         var client = roomClients[key];
-        client.send(JSON.stringify({ type: "user-joined", user_id: user_ids }));
+        sendData = JSON.stringify({ type: "user-joined", user_id: user_ids });
+        client.send(sendData);
     });
 
 }
